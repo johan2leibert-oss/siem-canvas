@@ -8,6 +8,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import DashboardHome from "./pages/DashboardHome";
 import Overview from "./pages/Overview";
 import Placeholder from "./pages/Placeholder";
+import Monitor from "./pages/Monitor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,7 +25,7 @@ const App = () => (
             <Route index element={<Navigate to="home" replace />} />
             <Route path="home" element={<DashboardHome />} />
             <Route path="overview" element={<Overview />} />
-            <Route path="monitor" element={<Placeholder />} />
+            <Route path="monitor" element={<Monitor />} />
             <Route path="correlation" element={<Placeholder />} />
             <Route path="configuration" element={<Placeholder />} />
             <Route path="security-stack" element={<Placeholder />} />

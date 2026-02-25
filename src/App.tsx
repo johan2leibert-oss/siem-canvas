@@ -7,9 +7,11 @@ import { ThemeProvider } from "next-themes";
 import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 import Overview from "./pages/Overview";
-import Placeholder from "./pages/Placeholder";
 import Monitor from "./pages/Monitor";
 import Correlation from "./pages/Correlation";
+import Configuration from "./pages/Configuration";
+import SecurityStack from "./pages/SecurityStack";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,9 +30,9 @@ const App = () => (
               <Route path="overview" element={<Overview />} />
               <Route path="monitor" element={<Monitor />} />
               <Route path="correlation" element={<Correlation />} />
-              <Route path="configuration" element={<Placeholder />} />
-              <Route path="security-stack" element={<Placeholder />} />
-              <Route path="about" element={<Placeholder />} />
+              <Route path="configuration" element={<Configuration />} />
+              <Route path="security-stack" element={<SecurityStack />} />
+              <Route path="about" element={<About />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

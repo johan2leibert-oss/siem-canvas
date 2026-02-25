@@ -21,7 +21,7 @@ export interface EventConfig {
   id: string;
   eventType: string;
   threshold: number;
-  logicalOperator?: "AND" | "OR";
+  logicalOperator?: "AND" | "OR" | "FOLLOWED_BY";
 }
 
 const severities = ["Low", "Medium", "High", "Critical"];
@@ -88,7 +88,7 @@ export function generateRules(count: number): CorrelationRule[] {
       id: `ec-${i}-${j}`,
       eventType: randomFrom(EVENT_TYPES_LIST),
       threshold: Math.floor(Math.random() * 50) + 1,
-      logicalOperator: j < numEvents - 1 ? randomFrom(["AND", "OR"] as const) : undefined,
+      logicalOperator: j < numEvents - 1 ? randomFrom(["AND", "OR", "FOLLOWED_BY"] as const) : undefined,
     }));
 
     return {

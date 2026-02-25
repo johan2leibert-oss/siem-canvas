@@ -74,9 +74,11 @@ const RuleEditor = ({ rule, onBack, onSave }: RuleEditorProps) => {
     setEventConfigs((prev) => prev.map((ec) => ec.id === id ? { ...ec, threshold } : ec));
   };
 
-  const updateOperator = (id: string, op: "AND" | "OR") => {
+  const updateOperator = (id: string, op: "AND" | "OR" | "FOLLOWED_BY") => {
     setEventConfigs((prev) => prev.map((ec) => ec.id === id ? { ...ec, logicalOperator: op } : ec));
   };
+
+  const [mitreSearch, setMitreSearch] = useState("");
 
   const handleSave = () => {
     onSave({
@@ -180,14 +182,39 @@ const RuleEditor = ({ rule, onBack, onSave }: RuleEditorProps) => {
             </div>
             <div>
               <Label>MITRE IDs</Label>
-              <div className="flex flex-wrap gap-2 mt-1 max-h-32 overflow-auto">
-                {MITRE_IDS_LIST.map((m) => (
-                  <label key={m} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <Checkbox checked={selectedMitre.includes(m)} onCheckedChange={() => toggleMitre(m)} />
+              <Input
+                value={mitreSearch}
+                onChange={(e) => setMitreSearch(e.target.value)}
+                placeholder="Search MITRE IDs..."
+                className="mt-1"
+              />
+              <div className="flex flex-wrap gap-1.5 mt-2 max-h-32 overflow-auto">
+                {MITRE_IDS_LIST.filter((m) =>
+                  m.toLowerCase().includes(mitreSearch.toLowerCase())
+                ).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => toggleMitre(m)}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      selectedMitre.includes(m)
+                        ? "bg-primary/20 text-primary border border-primary/40"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
                     {m}
-                  </label>
+                  </button>
                 ))}
               </div>
+              {selectedMitre.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {selectedMitre.map((m) => (
+                    <span key={m} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary text-xs">
+                      {m.split(" - ")[0]}
+                      <button onClick={() => toggleMitre(m)} className="hover:text-destructive">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -246,14 +273,15 @@ const RuleEditor = ({ rule, onBack, onSave }: RuleEditorProps) => {
                     <div className="flex justify-center my-2">
                       <Select
                         value={ec.logicalOperator || "AND"}
-                        onValueChange={(v) => updateOperator(ec.id, v as "AND" | "OR")}
+                        onValueChange={(v) => updateOperator(ec.id, v as "AND" | "OR" | "FOLLOWED_BY")}
                       >
-                        <SelectTrigger className="w-24 h-8 text-xs font-bold">
+                        <SelectTrigger className="w-32 h-8 text-xs font-bold">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="AND">AND</SelectItem>
                           <SelectItem value="OR">OR</SelectItem>
+                          <SelectItem value="FOLLOWED_BY">FOLLOWED BY</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

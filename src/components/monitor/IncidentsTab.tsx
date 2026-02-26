@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { Search, CalendarIcon } from "lucide-react";
+import { Search, CalendarIcon, Wifi, WifiOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -12,13 +12,16 @@ import {
   INCIDENT_TYPE_OPTIONS,
   EVENT_COUNT_FILTER_OPTIONS,
 } from "@/lib/monitor-data";
+import { fetchIncidents } from "@/lib/api-service";
 import ColumnFilter from "./ColumnFilter";
 import PaginationControls from "./PaginationControls";
 
 const PAGE_SIZE = 15;
 
 const IncidentsTab = () => {
-  const [allIncidents] = useState<IncidentRecord[]>(() => generateIncidents(150));
+  const [allIncidents, setAllIncidents] = useState<IncidentRecord[]>([]);
+  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>("desc");
   const [mitreSortDir, setMitreSortDir] = useState<"asc" | "desc" | null>(null);
   const [incidentTypeFilter, setIncidentTypeFilter] = useState("All");
@@ -27,6 +30,19 @@ const IncidentsTab = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    fetchIncidents().then(({ data, isLive: live }) => {
+      if (mounted) {
+        setAllIncidents(data);
+        setIsLive(live);
+        setLoading(false);
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
 
   const filtered = useMemo(() => {
     let data = allIncidents;
@@ -45,7 +61,6 @@ const IncidentsTab = () => {
       end.setHours(23, 59, 59);
       data = data.filter((d) => d.timestamp <= end);
     }
-    // Primary sort
     if (sortDir)
       data = [...data].sort((a, b) =>
         sortDir === "asc" ? a.timestamp.getTime() - b.timestamp.getTime() : b.timestamp.getTime() - a.timestamp.getTime()
@@ -62,6 +77,13 @@ const IncidentsTab = () => {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <p className="text-sm text-muted-foreground">
+          {loading ? "Loading..." : isLive ? "Connected to live API" : "Using mock data (API unreachable)"}
+        </p>
+        {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+      </div>
+
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex items-center gap-2">
           <Popover>
@@ -119,7 +141,11 @@ const IncidentsTab = () => {
             </tr>
           </thead>
           <tbody>
-            {pageData.map((inc) => (
+            {loading ? (
+              <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Loading incidents...</td></tr>
+            ) : pageData.length === 0 ? (
+              <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No incidents found</td></tr>
+            ) : pageData.map((inc) => (
               <tr key={inc.id} className="border-t border-border hover:bg-secondary/30 transition-colors">
                 <td className="p-3 font-mono text-xs whitespace-nowrap">{format(inc.timestamp, "yyyy-MM-dd HH:mm:ss")}</td>
                 <td className="p-3 text-xs">{inc.incidentType}</td>

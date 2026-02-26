@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { Search, CalendarIcon } from "lucide-react";
+import { Search, CalendarIcon, Wifi, WifiOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -13,6 +13,7 @@ import {
   SEVERITY_OPTIONS,
   SOURCE_OPTIONS,
 } from "@/lib/monitor-data";
+import { fetchEvents } from "@/lib/api-service";
 import ColumnFilter from "./ColumnFilter";
 import SeverityBadge from "./SeverityBadge";
 import PaginationControls from "./PaginationControls";
@@ -20,7 +21,9 @@ import PaginationControls from "./PaginationControls";
 const PAGE_SIZE = 20;
 
 const RealtimeEvents = () => {
-  const [events, setEvents] = useState<EventRecord[]>(() => generateEvents(200));
+  const [events, setEvents] = useState<EventRecord[]>([]);
+  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>("desc");
   const [eventTypeFilter, setEventTypeFilter] = useState("All");
   const [eventNameFilter, setEventNameFilter] = useState("All");
@@ -31,8 +34,23 @@ const RealtimeEvents = () => {
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [page, setPage] = useState(1);
 
-  // Simulate realtime incoming events
+  // Fetch from API on mount
   useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    fetchEvents().then(({ data, isLive: live }) => {
+      if (mounted) {
+        setEvents(data);
+        setIsLive(live);
+        setLoading(false);
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  // Simulate realtime incoming events (only when using mock data)
+  useEffect(() => {
+    if (isLive) return; // Don't simulate when connected to real API
     const interval = setInterval(() => {
       const newEvents = generateEvents(1).map((e) => ({
         ...e,
@@ -42,7 +60,7 @@ const RealtimeEvents = () => {
       setEvents((prev) => [...newEvents, ...prev].slice(0, 500));
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isLive]);
 
   const filtered = useMemo(() => {
     let data = events;
@@ -76,9 +94,12 @@ const RealtimeEvents = () => {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Live feed — new events appear automatically.
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="text-sm text-muted-foreground">
+          {loading ? "Loading events..." : isLive ? "Connected to live API" : "Live feed — using mock data (API unreachable)"}
+        </p>
+        {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+      </div>
 
       {/* Top filters */}
       <div className="flex flex-wrap gap-3 items-end">
@@ -143,7 +164,11 @@ const RealtimeEvents = () => {
             </tr>
           </thead>
           <tbody>
-            {pageData.map((evt) => (
+            {loading ? (
+              <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">Loading events...</td></tr>
+            ) : pageData.length === 0 ? (
+              <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No events found</td></tr>
+            ) : pageData.map((evt) => (
               <tr key={evt.id} className="border-t border-border hover:bg-secondary/30 transition-colors">
                 <td className="p-3 font-mono text-xs whitespace-nowrap">{format(evt.timestamp, "yyyy-MM-dd HH:mm:ss")}</td>
                 <td className="p-3 text-xs">{evt.eventType}</td>

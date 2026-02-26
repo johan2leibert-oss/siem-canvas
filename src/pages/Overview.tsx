@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { FileText, AlertTriangle, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FileText, AlertTriangle, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/StatCard";
 import SeverityPieChart from "@/components/SeverityPieChart";
 import ThreatsBySourceChart from "@/components/ThreatsBySourceChart";
 import CountBarChart from "@/components/CountBarChart";
+import { fetchEvents, fetchIncidents } from "@/lib/api-service";
 
 type DayFilter = "today" | "7days" | "30days";
 
@@ -17,8 +18,28 @@ const mockStats: Record<DayFilter, { logEvents: number; incidents: number }> = {
 const Overview = () => {
   const [dayFilter, setDayFilter] = useState<DayFilter>("today");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isLive, setIsLive] = useState(false);
+  const [stats, setStats] = useState(mockStats["today"]);
 
-  const stats = mockStats[dayFilter];
+  useEffect(() => {
+    // Try to get real counts from API
+    Promise.all([fetchEvents(), fetchIncidents()]).then(([evtRes, incRes]) => {
+      if (evtRes.isLive || incRes.isLive) {
+        setIsLive(true);
+        setStats({
+          logEvents: evtRes.data.length,
+          incidents: incRes.data.length,
+        });
+      } else {
+        setIsLive(false);
+        setStats(mockStats[dayFilter]);
+      }
+    });
+  }, [refreshKey]);
+
+  useEffect(() => {
+    if (!isLive) setStats(mockStats[dayFilter]);
+  }, [dayFilter, isLive]);
 
   const dayOptions: { label: string; value: DayFilter }[] = [
     { label: "Today", value: "today" },
@@ -30,9 +51,15 @@ const Overview = () => {
     <div className="space-y-6 max-w-[1400px] mx-auto" key={refreshKey}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">SIEM Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Security overview and threat intelligence</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">SIEM Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-1">Security overview and threat intelligence</p>
+          </div>
+          <div className="flex items-center gap-1 ml-2">
+            {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+            <span className="text-xs text-muted-foreground">{isLive ? "Live" : "Mock"}</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {dayOptions.map((opt) => (
@@ -63,14 +90,14 @@ const Overview = () => {
           title="Log Events"
           value={stats.logEvents}
           icon={FileText}
-          trend={dayFilter === "today" ? "+12% from yesterday" : undefined}
+          trend={dayFilter === "today" && !isLive ? "+12% from yesterday" : undefined}
           trendUp
         />
         <StatCard
           title="Incidents"
           value={stats.incidents}
           icon={AlertTriangle}
-          trend={dayFilter === "today" ? "-5% from yesterday" : undefined}
+          trend={dayFilter === "today" && !isLive ? "-5% from yesterday" : undefined}
           trendUp={false}
         />
       </div>

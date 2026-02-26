@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { ArrowUpDown, Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowUpDown, Plus, Wifi, WifiOff } from "lucide-react";
+import { fetchUsers, addUser as addUserApi } from "@/lib/api-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,24 @@ const initialUsers: User[] = Array.from({ length: 12 }, (_, i) => ({
 
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    fetchUsers().then(({ data, isLive: live }) => {
+      if (live && data.length > 0) {
+        setUsers(data.map((u: any) => ({
+          userId: u.userId || u.user_id || u._id || "",
+          username: u.username || u.user_name || "",
+          role: u.role || "Analyst",
+          email: u.email || "",
+          team: u.team || "",
+          severity: u.severity || "Low",
+          action: u.action || "Active",
+        })));
+      }
+      setIsLive(live);
+    });
+  }, []);
   const [sortField, setSortField] = useState<"username" | "role" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filterUsername, setFilterUsername] = useState("");
@@ -72,12 +91,17 @@ const UserManagement = () => {
       action: newUser.action || "Active",
     };
     setUsers((prev) => [u, ...prev]);
+    if (isLive) addUserApi(u).catch(console.error);
     setDialogOpen(false);
     setNewUser({ role: "Analyst", severity: "Low" });
   };
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+        <span className="text-xs text-muted-foreground">{isLive ? "Live API" : "Mock data"}</span>
+      </div>
       <div className="flex items-center gap-3 flex-wrap">
         <Input placeholder="Filter by username" value={filterUsername} onChange={(e) => setFilterUsername(e.target.value)} className="w-48" />
         <Input placeholder="Filter by role" value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="w-48" />

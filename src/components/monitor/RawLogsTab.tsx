@@ -1,19 +1,22 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { Search, CalendarIcon } from "lucide-react";
+import { Search, CalendarIcon, Wifi, WifiOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { RawLogRecord, generateRawLogs, SOURCE_OPTIONS } from "@/lib/monitor-data";
+import { fetchRawLogs } from "@/lib/api-service";
 import ColumnFilter from "./ColumnFilter";
 import PaginationControls from "./PaginationControls";
 
 const PAGE_SIZE = 20;
 
 const RawLogsTab = () => {
-  const [allLogs] = useState<RawLogRecord[]>(() => generateRawLogs(300));
+  const [allLogs, setAllLogs] = useState<RawLogRecord[]>([]);
+  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>("desc");
   const [sourceFilter, setSourceFilter] = useState("All");
   const [searchIp, setSearchIp] = useState("");
@@ -22,6 +25,19 @@ const RawLogsTab = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    fetchRawLogs().then(({ data, isLive: live }) => {
+      if (mounted) {
+        setAllLogs(data);
+        setIsLive(live);
+        setLoading(false);
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
 
   const filtered = useMemo(() => {
     let data = allLogs;
@@ -44,11 +60,17 @@ const RawLogsTab = () => {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
   const hostnames = ["All", ...Array.from(new Set(allLogs.map((l) => l.hostname)))];
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <p className="text-sm text-muted-foreground">
+          {loading ? "Loading..." : isLive ? "Connected to live API" : "Using mock data (API unreachable)"}
+        </p>
+        {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+      </div>
+
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex items-center gap-2">
           <Popover>
@@ -106,7 +128,11 @@ const RawLogsTab = () => {
             </tr>
           </thead>
           <tbody>
-            {pageData.map((log) => (
+            {loading ? (
+              <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Loading logs...</td></tr>
+            ) : pageData.length === 0 ? (
+              <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No logs found</td></tr>
+            ) : pageData.map((log) => (
               <tr key={log.id} className="border-t border-border hover:bg-secondary/30 transition-colors">
                 <td className="p-3 font-mono text-xs whitespace-nowrap">{format(log.timestamp, "yyyy-MM-dd HH:mm:ss")}</td>
                 <td className="p-3 text-xs font-mono max-w-md truncate">{log.logMessage}</td>

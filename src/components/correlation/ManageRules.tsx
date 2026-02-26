@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Plus, Eye, Pencil, Trash2 } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { CorrelationRule } from "@/lib/correlation-data";
+import { CorrelationRule, generateRules } from "@/lib/correlation-data";
+import { fetchCorrelationRules } from "@/lib/api-service";
 import SeverityBadge from "@/components/monitor/SeverityBadge";
 
 interface ManageRulesProps {
@@ -12,13 +13,29 @@ interface ManageRulesProps {
   onCreateRule: () => void;
   onToggleRule: (id: string) => void;
   onDeleteRule: (id: string) => void;
+  onRulesLoaded?: (rules: CorrelationRule[], isLive: boolean) => void;
 }
 
-const ManageRules = ({ rules, onEditRule, onCreateRule, onToggleRule, onDeleteRule }: ManageRulesProps) => {
+const ManageRules = ({ rules, onEditRule, onCreateRule, onToggleRule, onDeleteRule, onRulesLoaded }: ManageRulesProps) => {
+  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCorrelationRules().then(({ data, isLive: live }) => {
+      setIsLive(live);
+      setLoading(false);
+      if (onRulesLoaded) onRulesLoaded(data, live);
+    });
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Manage Rules</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">Manage Rules</h2>
+          {loading ? null : isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+          <span className="text-xs text-muted-foreground">{loading ? "Loading..." : isLive ? "Live API" : "Mock data"}</span>
+        </div>
         <Button onClick={onCreateRule} size="sm" className="gap-2">
           <Plus className="w-4 h-4" />
           Create Rule
@@ -40,7 +57,11 @@ const ManageRules = ({ rules, onEditRule, onCreateRule, onToggleRule, onDeleteRu
             </tr>
           </thead>
           <tbody>
-            {rules.map((rule) => (
+            {loading ? (
+              <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">Loading rules...</td></tr>
+            ) : rules.length === 0 ? (
+              <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No rules found</td></tr>
+            ) : rules.map((rule) => (
               <tr
                 key={rule.id}
                 className="border-t border-border hover:bg-secondary/30 transition-colors cursor-pointer"

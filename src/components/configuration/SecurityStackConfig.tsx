@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { ArrowUpDown, Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowUpDown, Plus, Wifi, WifiOff } from "lucide-react";
+import { fetchModules, addModule as addModuleApi } from "@/lib/api-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,20 @@ const initialModules: Module[] = [
 
 const SecurityStackConfig = () => {
   const [modules, setModules] = useState<Module[]>(initialModules);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    fetchModules().then(({ data, isLive: live }) => {
+      if (live && data.length > 0) {
+        setModules(data.map((m: any) => ({
+          id: m.id || m._id || "",
+          moduleName: m.moduleName || m.module_name || "",
+          url: m.url || "",
+        })));
+      }
+      setIsLive(live);
+    });
+  }, []);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [sorted, setSorted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -49,12 +64,17 @@ const SecurityStackConfig = () => {
       url: newModule.url || "",
     };
     setModules((prev) => [m, ...prev]);
+    if (isLive) addModuleApi(m).catch(console.error);
     setDialogOpen(false);
     setNewModule({ moduleName: "NDR" });
   };
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+        <span className="text-xs text-muted-foreground">{isLive ? "Live API" : "Mock data"}</span>
+      </div>
       <div className="flex items-center">
         <Button onClick={() => setDialogOpen(true)} className="ml-auto gap-2"><Plus className="w-4 h-4" />Add New Module</Button>
       </div>

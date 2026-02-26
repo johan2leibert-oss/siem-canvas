@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { ArrowUpDown, Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowUpDown, Plus, Wifi, WifiOff } from "lucide-react";
+import { fetchAssets, addAsset as addAssetApi } from "@/lib/api-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,25 @@ const initialAssets: Asset[] = Array.from({ length: 10 }, (_, i) => ({
 
 const AssetManagement = () => {
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    fetchAssets().then(({ data, isLive: live }) => {
+      if (live && data.length > 0) {
+        setAssets(data.map((a: any) => ({
+          assetId: a.assetId || a.asset_id || a._id || "",
+          hostname: a.hostname || "",
+          deviceTag: a.deviceTag || a.device_tag || "Server",
+          ipAddress: a.ipAddress || a.ip_address || "",
+          location: a.location || "",
+          owner: a.owner || "",
+          criticality: a.criticality || "Low",
+          os: a.os || a.operating_system || "",
+        })));
+      }
+      setIsLive(live);
+    });
+  }, []);
   const [sortField, setSortField] = useState<"hostname" | "deviceTag" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filterHostname, setFilterHostname] = useState("");
@@ -75,12 +95,17 @@ const AssetManagement = () => {
       os: newAsset.os || "Ubuntu 22.04",
     };
     setAssets((prev) => [a, ...prev]);
+    if (isLive) addAssetApi(a).catch(console.error);
     setDialogOpen(false);
     setNewAsset({ deviceTag: "Server", criticality: "Low", os: "Ubuntu 22.04" });
   };
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+        <span className="text-xs text-muted-foreground">{isLive ? "Live API" : "Mock data"}</span>
+      </div>
       <div className="flex items-center gap-3 flex-wrap">
         <Input placeholder="Filter by hostname" value={filterHostname} onChange={(e) => setFilterHostname(e.target.value)} className="w-48" />
         <Input placeholder="Filter by location" value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="w-48" />

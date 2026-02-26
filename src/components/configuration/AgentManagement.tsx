@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { ArrowUpDown, Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowUpDown, Plus, Wifi, WifiOff } from "lucide-react";
+import { fetchAgents, addAgent as addAgentApi } from "@/lib/api-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,23 @@ const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
 
 const AgentManagement = () => {
   const [agents, setAgents] = useState<Agent[]>(initialAgents);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    fetchAgents().then(({ data, isLive: live }) => {
+      if (live && data.length > 0) {
+        setAgents(data.map((a: any) => ({
+          configId: a.configId || a.config_id || a._id || "",
+          username: a.username || "",
+          agentType: a.agentType || a.agent_type || "Endpoint Agent",
+          healthStatus: a.healthStatus || a.health_status || "Healthy",
+          ipAddress: a.ipAddress || a.ip_address || "",
+          os: a.os || "",
+        })));
+      }
+      setIsLive(live);
+    });
+  }, []);
   const [sortField, setSortField] = useState<"configId" | "username" | "agentType" | "healthStatus" | "os" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filterIp, setFilterIp] = useState("");
@@ -69,6 +87,7 @@ const AgentManagement = () => {
       os: newAgent.os || "Ubuntu 22.04",
     };
     setAgents((prev) => [a, ...prev]);
+    if (isLive) addAgentApi(a).catch(console.error);
     setDialogOpen(false);
     setNewAgent({ agentType: "Endpoint Agent", os: "Ubuntu 22.04" });
   };
@@ -82,6 +101,10 @@ const AgentManagement = () => {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        {isLive ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+        <span className="text-xs text-muted-foreground">{isLive ? "Live API" : "Mock data"}</span>
+      </div>
       <div className="flex items-center gap-3 flex-wrap">
         <Input placeholder="Filter by IP address" value={filterIp} onChange={(e) => setFilterIp(e.target.value)} className="w-48" />
         <Input placeholder="Filter by agent type" value={filterAgentType} onChange={(e) => setFilterAgentType(e.target.value)} className="w-48" />

@@ -1,13 +1,12 @@
-// API Configuration - adapted from API_ENDPOINT_URL.ts
-// In Lovable preview, these will be empty and the app falls back to mock data.
-// When deployed on your network, set VITE_ env vars at build time.
+// API Configuration - hardcoded for internal network deployment
+// These IPs are your actual backend servers on the local network
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-const WS_BASE = import.meta.env.VITE_WS_API_BASE || "";
-const ASSET_USER_BASE = import.meta.env.VITE_API_SOC_ASSET_USER_DATA_INFO_URL || "";
-const AGENT_BASE = import.meta.env.VITE_API_SOC_AGENT_ENDPOINT_INFO_URL || "";
-const CHARTS_BASE = import.meta.env.VITE_FETCH_CHARTS_OVERVIEW_URL || "";
-const ENDPOINT_BASE = import.meta.env.VITE_ENDPOINT_BASE_URL || "";
+const API_BASE = "http://10.229.42.103";
+const WS_BASE = "ws://10.229.42.103";
+const ASSET_USER_BASE = "http://10.229.40.134";
+const AGENT_BASE = "http://10.229.40.67:5000";
+const CHARTS_BASE = "http://10.229.40.96:5000";
+const ENDPOINT_BASE = "http://10.229.40.134";
 
 const SIEM_API_DATA = "/api/soc/siem/data";
 const SIEM_API_BASE = "/api/soc/siem";
@@ -73,7 +72,7 @@ export const API_ENDPOINTS = {
   GET_BASELINE_SUMMARY: `${ENDPOINT_BASE}/api/soc/v0_09/ndr/getBaselineTraffic`,
 } as const;
 
-/** Check if API integration is configured (any base URL is set) */
+/** Always configured now since URLs are hardcoded */
 export const isApiConfigured = (): boolean => {
-  return !!(API_BASE || ASSET_USER_BASE || AGENT_BASE);
+  return true;
 };
